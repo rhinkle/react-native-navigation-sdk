@@ -29,7 +29,7 @@ import {
   type Polyline,
   type LatLng,
   type NavigationCallbacks,
-  useNavigation,
+  useNavigation as useNavigationSDK,
   NavigationInitErrorCode,
   RouteStatus,
   type ArrivalEvent,
@@ -40,6 +40,7 @@ import MapsControls from './mapsControls';
 import NavigationControls from './navigationControls';
 import OverlayModal from './overlayModal';
 import { NavigationView } from '../../src/navigation/navigationView/navigationView';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 // Utility function for showing Snackbar
 const showSnackbar = (text: string, duration = Snackbar.LENGTH_SHORT) => {
@@ -63,15 +64,36 @@ const NavigationScreen = () => {
     useState<NavigationViewController | null>(null);
 
   const { navigationController, addListeners, removeListeners } =
-    useNavigation();
+    useNavigationSDK();
 
   const [navigationInitialized, setNavigationInitialized] = useState(false);
+  const [displayMap, setDisplayMap] = useState<boolean>(false);
 
   const onRouteChanged = useCallback(() => {
     showSnackbar('Route Changed');
   }, []);
 
   const [margin, setMargin] = useState<number | null>(null);
+
+  const navigation = useNavigation();
+
+  const cleanUpNavigation = useCallback(async () => {
+    mapViewController?.clearMapView();
+    await navigationController.clearDestinations();
+    await navigationController.cleanup();
+  }, [mapViewController, navigationController]);
+
+  console.log('Ryan - NavigationScreen', displayMap);
+  useFocusEffect(
+    React.useCallback(() => {
+      setDisplayMap(true);
+
+      return navigation.addListener('blur', async () => {
+        setDisplayMap(false);
+        await cleanUpNavigation();
+      });
+    }, [cleanUpNavigation, navigation])
+  );
 
   const onArrival = useCallback(
     (event: ArrivalEvent) => {
@@ -93,10 +115,14 @@ const NavigationScreen = () => {
     showSnackbar('Traffic Updated');
   }, []);
 
-  const onNavigationReady = useCallback(() => {
+  const onNavigationReady = useCallback(async () => {
     console.log('onNavigationReady');
     setNavigationInitialized(true);
-  }, []);
+    if (mapViewController) {
+      const loc = await mapViewController.getMyLocation();
+      console.log('Ryan - My location:', loc);
+    }
+  }, [mapViewController]);
 
   const onNavigationDispose = useCallback(async () => {
     await navigationViewController?.setNavigationUIEnabled(false);
@@ -240,11 +266,12 @@ const NavigationScreen = () => {
     console.log('Map is ready, initializing navigator...');
     try {
       await navigationController.init();
+      mapViewController?.setMyLocationEnabled(true);
     } catch (error) {
       console.error('Error initializing navigator', error);
       showSnackbar('Error initializing navigator');
     }
-  }, [navigationController]);
+  }, [mapViewController, navigationController]);
 
   const onRecenterButtonClick = useCallback(() => {
     console.log('onRecenterButtonClick');
@@ -294,7 +321,7 @@ const NavigationScreen = () => {
     setOverlayType(OverlayType.None);
   };
 
-  return arePermissionsApproved ? (
+  return arePermissionsApproved && displayMap ? (
     <View style={[styles.container]}>
       <NavigationView
         style={[

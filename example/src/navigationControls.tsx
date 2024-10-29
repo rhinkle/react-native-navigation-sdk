@@ -89,6 +89,7 @@ const NavigationControls: React.FC<NavigationControlsProps> = ({
       Alert.alert('Invalid destination');
       return;
     }
+
     const waypoint: Waypoint = {
       title: 'Town hall',
       position: {
