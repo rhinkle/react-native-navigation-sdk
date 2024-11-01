@@ -34,6 +34,7 @@ import {
   RouteStatus,
   type ArrivalEvent,
   type Location,
+  type Waypoint,
 } from '@googlemaps/react-native-navigation-sdk';
 import usePermissions from './checkPermissions';
 import MapsControls from './mapsControls';
@@ -83,7 +84,19 @@ const NavigationScreen = () => {
     await navigationController.cleanup();
   }, [mapViewController, navigationController]);
 
-  console.log('Ryan - NavigationScreen', displayMap);
+  const moveCameraToStartingSpot = useCallback(async () => {
+    if (mapViewController) {
+      await mapViewController.moveCamera({
+        target: {
+          lat: 42.060047,
+          lng: -87.824613,
+        },
+        zoom: 10,
+        bearing: 0,
+      });
+    }
+  }, [mapViewController]);
+
   useFocusEffect(
     React.useCallback(() => {
       setDisplayMap(true);
@@ -115,14 +128,45 @@ const NavigationScreen = () => {
     showSnackbar('Traffic Updated');
   }, []);
 
+  const createWayPoints = useCallback(
+    async (wayPoints: { lat: number; lng: number }[]) => {
+      for (const wayPoint of wayPoints) {
+        await mapViewController?.addMarker({
+          position: wayPoint,
+          visible: true,
+        });
+      }
+    },
+    [mapViewController]
+  );
+
   const onNavigationReady = useCallback(async () => {
+    const wayPoints = [
+      { lat: 42.02265096971242, lng: -87.88297802209854 },
+      { lat: 42.02367115228353, lng: -87.78227012604475 },
+      { lat: 42.100817565947494, lng: -87.86787182092667 },
+    ];
     console.log('onNavigationReady');
     setNavigationInitialized(true);
-    if (mapViewController) {
-      const loc = await mapViewController.getMyLocation();
-      console.log('Ryan - My location:', loc);
-    }
-  }, [mapViewController]);
+    await moveCameraToStartingSpot();
+
+    const destinations: Waypoint[] = wayPoints.map(wayPoint => ({
+      position: {
+        lat: wayPoint.lat,
+        lng: wayPoint.lng,
+      },
+    }));
+
+    navigationController.setDestinations(destinations);
+
+    await createWayPoints(wayPoints);
+    await navigationViewController?.showRouteOverview();
+  }, [
+    createWayPoints,
+    moveCameraToStartingSpot,
+    navigationController,
+    navigationViewController,
+  ]);
 
   const onNavigationDispose = useCallback(async () => {
     await navigationViewController?.setNavigationUIEnabled(false);
@@ -294,7 +338,6 @@ const NavigationScreen = () => {
       onMapReady,
       onMarkerClick: (marker: Marker) => {
         console.log('onMarkerClick:', marker);
-        mapViewController?.removeMarker(marker.id);
       },
       onPolygonClick: (polygon: Polygon) => {
         console.log('onPolygonClick:', polygon);
