@@ -35,6 +35,7 @@ import {
   type ArrivalEvent,
   type Location,
   type Waypoint,
+  type RoutingOptions,
 } from '@googlemaps/react-native-navigation-sdk';
 import usePermissions from './checkPermissions';
 import MapsControls from './mapsControls';
@@ -88,8 +89,8 @@ const NavigationScreen = () => {
     if (mapViewController) {
       await mapViewController.moveCamera({
         target: {
-          lat: 42.060047,
-          lng: -87.824613,
+          lat: 32.8271135,
+          lng: -96.830288,
         },
         zoom: 10,
         bearing: 0,
@@ -142,9 +143,19 @@ const NavigationScreen = () => {
 
   const onNavigationReady = useCallback(async () => {
     const wayPoints = [
-      { lat: 42.02265096971242, lng: -87.88297802209854 },
-      { lat: 42.02367115228353, lng: -87.78227012604475 },
-      { lat: 42.100817565947494, lng: -87.86787182092667 },
+      { lat: 32.78889, lng: -96.906553 },
+      { lat: 32.7215158, lng: -96.8094594 },
+      { lat: 32.709446, lng: -96.746567 },
+      { lat: 32.842525, lng: -96.810209 },
+      { lat: 32.770895, lng: -96.697785 },
+      { lat: 32.793867, lng: -96.767341 },
+      { lat: 32.854362, lng: -96.744946 },
+      { lat: 32.845018, lng: -96.808388 },
+      { lat: 32.925, lng: -96.846349 },
+      { lat: 32.901702, lng: -96.982005 },
+      { lat: 32.778306, lng: -96.697305 },
+      { lat: 32.7449539, lng: -96.8513408 },
+      { lat: 32.7852848, lng: -96.8186504 },
     ];
     console.log('onNavigationReady');
     setNavigationInitialized(true);
@@ -157,16 +168,22 @@ const NavigationScreen = () => {
       },
     }));
 
-    navigationController.setDestinations(destinations);
+    const routingOptions: RoutingOptions = {
+      travelMode: 0,
+      alternateRoutesStrategy: 1,
+      avoidFerries: true,
+      avoidTolls: false,
+    };
+
+    try {
+      await navigationController.setDestinations(destinations, routingOptions);
+    } catch (error) {
+      console.error('Error setting destinations', error);
+      showSnackbar('Error setting destinations');
+    }
 
     await createWayPoints(wayPoints);
-    await navigationViewController?.showRouteOverview();
-  }, [
-    createWayPoints,
-    moveCameraToStartingSpot,
-    navigationController,
-    navigationViewController,
-  ]);
+  }, [createWayPoints, moveCameraToStartingSpot, navigationController]);
 
   const onNavigationDispose = useCallback(async () => {
     await navigationViewController?.setNavigationUIEnabled(false);
@@ -186,7 +203,8 @@ const NavigationScreen = () => {
 
   const onRouteStatusOk = useCallback(() => {
     showSnackbar('Route created');
-  }, []);
+    navigationViewController?.showRouteOverview();
+  }, [navigationViewController]);
 
   const onRouteCancelled = useCallback(() => {
     showSnackbar('Error: Route Cancelled');
