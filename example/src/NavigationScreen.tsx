@@ -203,7 +203,6 @@ const NavigationScreen = () => {
 
   const onRouteStatusOk = useCallback(() => {
     showSnackbar('Route created');
-    navigationViewController?.showRouteOverview();
   }, [navigationViewController]);
 
   const onRouteCancelled = useCallback(() => {
