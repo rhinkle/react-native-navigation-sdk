@@ -86,15 +86,23 @@ const NavigationScreen = () => {
   }, [mapViewController, navigationController]);
 
   const moveCameraToStartingSpot = useCallback(async () => {
+    console.log('Ryan - moveCameraToStartingSpot');
     if (mapViewController) {
-      await mapViewController.moveCamera({
-        target: {
-          lat: 32.8271135,
-          lng: -96.830288,
-        },
-        zoom: 10,
-        bearing: 0,
-      });
+      console.log('Ryan - moveCameraToStartingSpot - mapViewController');
+      try {
+        await mapViewController.moveCamera({
+          target: {
+            lat: 32.8271135,
+            lng: -96.830288,
+          },
+          zoom: 10,
+          bearing: 0,
+          tilt: 0,
+        });
+      } catch (error) {
+        console.error('Error moving camera', error);
+        showSnackbar('Error moving camera');
+      }
     }
   }, [mapViewController]);
 
@@ -183,7 +191,7 @@ const NavigationScreen = () => {
     }
 
     await createWayPoints(wayPoints);
-  }, [createWayPoints, moveCameraToStartingSpot, navigationController]);
+  }, [moveCameraToStartingSpot]);
 
   const onNavigationDispose = useCallback(async () => {
     await navigationViewController?.setNavigationUIEnabled(false);
@@ -201,9 +209,10 @@ const NavigationScreen = () => {
     showSnackbar('Start Guidance');
   }, []);
 
-  const onRouteStatusOk = useCallback(() => {
+  const onRouteStatusOk = useCallback(async () => {
     showSnackbar('Route created');
-  }, [navigationViewController]);
+    await moveCameraToStartingSpot();
+  }, [moveCameraToStartingSpot]);
 
   const onRouteCancelled = useCallback(() => {
     showSnackbar('Error: Route Cancelled');
@@ -334,9 +343,10 @@ const NavigationScreen = () => {
     }
   }, [mapViewController, navigationController]);
 
-  const onRecenterButtonClick = useCallback(() => {
+  const onRecenterButtonClick = useCallback(async () => {
     console.log('onRecenterButtonClick');
-  }, []);
+    await moveCameraToStartingSpot();
+  }, [moveCameraToStartingSpot]);
 
   const onShowNavControlsClick = useCallback(() => {
     setOverlayType(OverlayType.NavControls);
